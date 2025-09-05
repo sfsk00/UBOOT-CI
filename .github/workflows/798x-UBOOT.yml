@@ -138,7 +138,6 @@ jobs:
             EXT=$(basename $FILE | cut -d '.' -f 2-)
             NAME=$(basename $FILE | cut -d '.' -f 1)
             NEW_FILE="$NAME"_"$WRT_DATE"."$EXT" 
-			#NEW_FILE="$NAME"_"$WRT_VER"_"$WRT_DATE"."$EXT"
             mv -f $FILE ./upload/$NEW_FILE
           done
 
