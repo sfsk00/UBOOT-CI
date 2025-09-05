@@ -1,4 +1,4 @@
-name: 798x-UBOOT
+name: 798x-UBOOT-test
 
 on:
   #自动编译：每周日早上4点
@@ -87,14 +87,14 @@ jobs:
             key="$soc:$board"
             if [[ $rest == *_multi_layout ]]; then
               lines_map["$rest"]="SOC=$soc BOARD=$rest MULTI_LAYOUT=1 ./build.sh"
-            elif [[ -z "${lines_map[_multi_layout]}" ]]; then
+            else
               lines_map["$rest"]="SOC=$soc BOARD=$rest ./build.sh"
             fi
           done < <(find ./wrt/uboot-mtk-*/configs -type f -name 'mt798*defconfig' | grep -iE 'mt798[16]_' | grep -ivE 'rfb|fpga')
 
           # 输出 Uboots.txt
           printf "%s\n" "${lines_map[@]}" | sort > ./Uboots.txt
-
+          cat ./Uboots.txt
           # 生成 TYPE_7981 和 TYPE_7986（按 SOC 分类，BOARD 大写 + 排序）
           for soc in 7981 7986; do
             boards=$(awk -v s="SOC=mt$soc" '$0 ~ s {
