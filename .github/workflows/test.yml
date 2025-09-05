@@ -94,6 +94,7 @@ jobs:
 
           # 输出 Uboots.txt
           printf "%s\n" "${lines_map[@]}" | sort > ./Uboots.txt
+          sed -i 's/_multi_layout//' ./Uboots.txt
           cat ./Uboots.txt
           # 生成 TYPE_7981 和 TYPE_7986（按 SOC 分类，BOARD 大写 + 排序）
           for soc in 7981 7986; do
