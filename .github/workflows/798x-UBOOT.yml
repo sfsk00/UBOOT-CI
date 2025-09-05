@@ -137,12 +137,12 @@ jobs:
           for FILE in $(find ./output/ -type f -iname "*.*") ; do
             EXT=$(basename $FILE | cut -d '.' -f 2-)
             NAME=$(basename $FILE | cut -d '.' -f 1)
-            NEW_FILE="$NAME"_"$WRT_DATE"."$EXT" 
+            NEW_FILE="$NAME"_"$WRT_VER"_"$WRT_DATE"."$EXT"
             mv -f $FILE ./upload/$NEW_FILE
           done
 
-          zip -r ./upload/"$WRT_AUTHOR"_"$WRT_DATE".zip ./upload/*.*
-		  
+          zip -r ./upload/"$WRT_AUTHOR"_"$WRT_VER"_"$WRT_DATE".zip ./upload/*.*
+
       - name: Release Uboot
         uses: softprops/action-gh-release@master
         with:
