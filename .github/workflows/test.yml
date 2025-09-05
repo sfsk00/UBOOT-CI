@@ -86,9 +86,9 @@ jobs:
             echo $rest
             key="$soc:$board"
             if [[ $rest == *_multi_layout ]]; then
-              lines_map["$key"]="SOC=$soc BOARD=$board MULTI_LAYOUT=1 ./build.sh"
+              lines_map["$rest"]="SOC=$soc BOARD=$rest MULTI_LAYOUT=1 ./build.sh"
             elif [[ -z "${lines_map[_multi_layout]}" ]]; then
-              lines_map["$key"]="SOC=$soc BOARD=$board ./build.sh"
+              lines_map["$rest"]="SOC=$soc BOARD=$rest ./build.sh"
             fi
           done < <(find ./wrt/uboot-mtk-*/configs -type f -name 'mt798*defconfig' | grep -iE 'mt798[16]_' | grep -ivE 'rfb|fpga')
 
