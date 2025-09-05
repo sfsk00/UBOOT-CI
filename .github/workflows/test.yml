@@ -79,7 +79,7 @@ jobs:
           # 收集 uboot 配置并生成 Uboots.txt
           declare -A lines_map
           while IFS= read -r f; do
-            [[ $(basename "$f") =~ ^(mt798[6])_(.*)_defconfig$ ]] || continue
+            [[ $(basename "$f") =~ ^798[16][AB]?$_(.*)_defconfig$ ]] || continue
             soc="${BASH_REMATCH[1]}"
             rest="${BASH_REMATCH[2]}"
             board="${rest%_multi_layout}"
