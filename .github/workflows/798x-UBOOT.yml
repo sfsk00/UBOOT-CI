@@ -139,7 +139,7 @@ jobs:
             mv -f $FILE ./upload/$NEW_FILE
           done
 
-          zip -r ./upload/mt798X-Uboot__"$WRT_DATE".zip ./upload/*.*
+          zip -r ./upload/mt798X-Uboot_"$WRT_DATE".zip ./upload/*.*
 
       - name: Release Uboot
         uses: softprops/action-gh-release@master
@@ -157,6 +157,7 @@ jobs:
 
             ATF版本：${{matrix.WRT_ATF}}
             MTK版本：${{matrix.WRT_MTK}}
+            更新时间:$(TZ=UTC-8 date "+%Y-%m-%d %H:%M:%S")
 
             7981设备：${{env.WRT_TYPE_7981}}
             7986设备：${{env.WRT_TYPE_7986}}
