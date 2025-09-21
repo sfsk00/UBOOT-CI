@@ -48,16 +48,3 @@ jobs:
         echo '#!/bin/sh\nmount -t proc proc /proc\nmount -t sysfs sysfs /sys' > $BUILD_DIR/rootfs/etc/init.d/rcS
         chmod +x $BUILD_DIR/rootfs/etc/init.d/rcS
         genext2fs -b 8192 -d $BUILD_DIR/rootfs $BUILD_DIR/$ARTIFACT_NAME
-        
-    - name: Upload artifact
-      uses: actions/upload-artifact@v3
-      with:
-        name: busybox-rootfs
-        path: $BUILD_DIR/$ARTIFACT_NAME
-        retention-days: 5
-        
-    - name: Generate download link
-      id: download_link
-      run: |
-        echo "Download URL:" >> $GITHUB_STEP_SUMMARY
-        echo "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}" >> $GITHUB_STEP_SUMMARY
