@@ -1,86 +1,37 @@
+# Makefile
+BUSYBOX_REPO = git://busybox.net/busybox.git
+CROSS_COMPILE = arm-linux-gnueabihf-
+ARCH = arm
+OUTPUT = busybox-rootfs.img
 
-name: BusyBox Auto Build
+.PHONY: all clean
 
-on:
-  workflow_dispatch:
-  push:
-    branches: [ main ]
+all: clone build package
 
-env:
-  BUSYBOX_REPO: "git://busybox.net/busybox.git"
-  BUILD_DIR: "${{ github.workspace }}/build"
-  OUTPUT_IMAGE: "busybox-rootfs-${{ github.run_id }}.img"
-  URAMDISK: "uRamdisk"
+clone:
+	@echo "Cloning BusyBox repository..."
+	git clone $(BUSYBOX_REPO) busybox-src
 
-jobs:
-  setup:
-    runs-on: ubuntu-latest
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@v3
+configure:
+	cd busybox-src && make defconfig
+	sed -i 's/.*CONFIG_STATIC.*/CONFIG_STATIC=y/' busybox-src/.config
+	sed -i 's/.*CONFIG_UDHCPD.*/CONFIG_UDHCPD=y/' busybox-src/.config
 
-    - name: Install dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y \
-          git \
-          make \
-          gcc-arm-linux-gnueabihf \
-          genext2fs \
-          u-boot-tools
+build: configure
+	@echo "Building BusyBox..."
+	cd busybox-src && make CROSS_COMPILE=$(CROSS_COMPILE) ARCH=$(ARCH) -j$(nproc)
+	mkdir -p rootfs
+	cd busybox-src && make CROSS_COMPILE=$(CROSS_COMPILE) CONFIG_PREFIX=../rootfs install
 
-  build:
-    needs: setup
-    runs-on: ubuntu-latest
-    steps:
-    - name: Clone BusyBox
-      run: |
-        git clone $BUSYBOX_REPO
-        cd busybox
+package:
+	@echo "Creating rootfs image..."
+	# 创建初始化脚本
+	mkdir -p rootfs/etc/init.d
+	echo '#!/bin/sh\nmount -t proc proc /proc\nmount -t sysfs sysfs /sys' > rootfs/etc/init.d/rcS
+	chmod +x rootfs/etc/init.d/rcS
+	# 生成镜像
+	genext2fs -b 8192 -d rootfs $(OUTPUT)
+	mkimage -A $(ARCH) -O linux -T ramdisk -C none -a 0 -e 0 -n "BusyBox" -d $(OUTPUT) uRamdisk
 
-    - name: Configure build
-      run: |
-        cd busybox
-        make defconfig
-        sed -i 's/.*CONFIG_STATIC.*/CONFIG_STATIC=y/' .config
-        sed -i 's/.*CONFIG_UDHCPD.*/CONFIG_UDHCPD=y/' .config
-        sed -i 's/.*CONFIG_FEATURE_UDHCPD_WRITE_LEASES.*/CONFIG_FEATURE_UDHCPD_WRITE_LEASES=y/' .config
-
-    - name: Compile BusyBox
-      run: |
-        cd busybox
-        make CROSS_COMPILE=arm-linux-gnueabihf- ARCH=arm -j$(nproc)
-        mkdir -p $BUILD_DIR/rootfs
-        make CONFIG_PREFIX=$BUILD_DIR/rootfs install
-
-    - name: Create rootfs structure
-      run: |
-        mkdir -p $BUILD_DIR/rootfs/{etc/init.d,proc,sys,dev}
-        echo '#!/bin/sh
-mount -t proc proc /proc
-mount -t sysfs sysfs /sys
-/sbin/ifconfig lo 127.0.0.1' > $BUILD_DIR/rootfs/etc/init.d/rcS
-        chmod +x $BUILD_DIR/rootfs/etc/init.d/rcS
-
-    - name: Generate filesystem image
-      run: |
-        genext2fs -b 8192 -d $BUILD_DIR/rootfs $BUILD_DIR/$OUTPUT_IMAGE
-        mkimage -A arm -O linux -T ramdisk -C none \
-          -a 0 -e 0 -n "BusyBox RootFS" \
-          -d $BUILD_DIR/$OUTPUT_IMAGE $BUILD_DIR/$URAMDISK
-
-    - name: Upload artifacts
-      uses: actions/upload-artifact@v3
-      with:
-        name: busybox-images
-        path: |
-          $BUILD_DIR/$OUTPUT_IMAGE
-          $BUILD_DIR/$URAMDISK
-        retention-days: 7
-
-    - name: Generate download info
-      run: |
-        echo "Build artifacts available at:" >> $GITHUB_STEP_SUMMARY
-        echo "- RootFS Image: $OUTPUT_IMAGE" >> $GITHUB_STEP_SUMMARY
-        echo "- U-Boot Ramdisk: $URAMDISK" >> $GITHUB_STEP_SUMMARY
-        echo "Download from: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}" >> $GITHUB_STEP_SUMMARY
+clean:
+	rm -rf busybox-src rootfs $(OUTPUT) uRamdisk
