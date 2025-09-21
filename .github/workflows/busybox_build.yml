@@ -1,0 +1,63 @@
+
+name: BusyBox Auto Build
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+
+env:
+  BUSYBOX_REPO: "git://busybox.net/busybox.git"
+  BUILD_DIR: "${{ github.workspace }}/build"
+  ARTIFACT_NAME: "busybox-rootfs-${{ github.run_id }}.img"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Setup environment
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y git make gcc-arm-linux-gnueabihf
+        
+    - name: Clone BusyBox
+      run: |
+        git clone $BUSYBOX_REPO
+        cd busybox
+        
+    - name: Configure BusyBox
+      run: |
+        cd busybox
+        make defconfig
+        sed -i 's/.*CONFIG_STATIC.*/CONFIG_STATIC=y/' .config
+        sed -i 's/.*CONFIG_UDHCPD.*/CONFIG_UDHCPD=y/' .config
+        
+    - name: Build BusyBox
+      run: |
+        cd busybox
+        make CROSS_COMPILE=arm-linux-gnueabihf- ARCH=arm -j$(nproc)
+        mkdir -p $BUILD_DIR/rootfs
+        make CONFIG_PREFIX=$BUILD_DIR/rootfs install
+        
+    - name: Create rootfs
+      run: |
+        mkdir -p $BUILD_DIR/rootfs/{etc/init.d,proc,sys,dev}
+        echo '#!/bin/sh\nmount -t proc proc /proc\nmount -t sysfs sysfs /sys' > $BUILD_DIR/rootfs/etc/init.d/rcS
+        chmod +x $BUILD_DIR/rootfs/etc/init.d/rcS
+        genext2fs -b 8192 -d $BUILD_DIR/rootfs $BUILD_DIR/$ARTIFACT_NAME
+        
+    - name: Upload artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: busybox-rootfs
+        path: $BUILD_DIR/$ARTIFACT_NAME
+        retention-days: 5
+        
+    - name: Generate download link
+      id: download_link
+      run: |
+        echo "Download URL:" >> $GITHUB_STEP_SUMMARY
+        echo "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}" >> $GITHUB_STEP_SUMMARY
